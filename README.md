@@ -55,18 +55,18 @@ erDiagram
         text direccion_entrega
     }
     DETALLE_PEDIDO {
-        integer pedido_id FK
-        varchar producto_codigo FK
+        bigint pedido_id PK, FK
+        varchar producto_codigo PK, FK
         varchar nombre_producto
         integer cantidad
-        integer precio_unitario_clp
-        integer subtotal_clp
+        bigint precio_unitario_clp
+        bigint subtotal_clp "GENERATED ALWAYS AS cantidad * precio_unitario_clp STORED"
     }
 ```
 
-Las restricciones de negocio conocidas incluyen email normalizado y único, rol `cliente` o `admin`, stock no negativo, descuento entre 0 y 100, precios en CLP, y referencia de los pedidos a su usuario. El borrado administrativo de un producto es lógico (`activo=false`) para conservar referencias históricas. Durante el checkout la API rechaza códigos repetidos en una misma solicitud, valida cantidades, bloquea filas de producto para evitar sobreventa y revierte la transacción si algún producto no está disponible o no tiene stock suficiente.
+Las restricciones de negocio conocidas incluyen email normalizado y único, rol `cliente` o `admin`, stock no negativo, descuento entre 0 y 100, cantidad de línea mayor que cero y precio unitario no negativo. `subtotal_clp` lo calcula PostgreSQL como columna generada almacenada. El borrado administrativo de un producto es lógico (`activo=false`) para conservar referencias históricas. Durante el checkout la API rechaza códigos repetidos en una misma solicitud, valida cantidades, bloquea filas de producto para evitar sobreventa y revierte la transacción si algún producto no está disponible o no tiene stock suficiente.
 
-**Verificación pendiente del esquema físico:** este repositorio todavía no contiene un archivo de migración/DDL y la clave primaria exacta de `detalle_pedido` debe cotejarse con la tabla real de RDS antes de entregar el ERD como definitivo. En la sesión del equipo ejecuten `\d+ public.detalle_pedido` en `psql` y actualicen el diagrama si difiere. La [carpeta de Drive del equipo](https://drive.google.com/drive/u/2/folders/1_5g77gu0gb3D_mR7W476sDRTItrswFoy) fue enlazada desde el README del frontend; falta reemplazar este enlace de carpeta por el enlace directo al ERD y verificar permiso de lectura para el docente.
+**Confirmado contra RDS el 18-11-2026:** la clave primaria de `detalle_pedido` es compuesta por `(pedido_id, producto_codigo)`; ambas columnas también son llaves foráneas. `pedido_id` referencia `pedidos(id)` con `ON DELETE CASCADE`; `producto_codigo` referencia `productos(codigo)` con `ON DELETE RESTRICT`. `subtotal_clp` es `bigint GENERATED ALWAYS ... STORED`. Esta tabla ya está reflejada así en el ERD. El repositorio aún no incluye un archivo de migración/DDL. La salida recibida no muestra el tipo exacto de `pedidos.id`, por lo que se debe cotejar con `\d+ public.pedidos` para cerrar el resto de los tipos del ERD. La [carpeta de Drive del equipo](https://drive.google.com/drive/u/2/folders/1_5g77gu0gb3D_mR7W476sDRTItrswFoy) fue enlazada desde el README del frontend; falta reemplazar este enlace de carpeta por el enlace directo al ERD y verificar permiso de lectura para el docente.
 
 El catálogo inicial de diez productos se cargó en RDS. La carga fue manual y aún no hay un script de semillas versionado. El esquema también fue creado en RDS durante el trabajo; falta versionar una migración reproducible sin datos secretos.
 
