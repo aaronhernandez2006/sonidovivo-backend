@@ -2,6 +2,8 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
+import openapiSpec from './openapi.json' with { type: 'json' };
 import { pool } from './config/db.js';
 import authRoutes from './routes/auth.js';
 import pedidosRoutes from './routes/pedidos.js';
@@ -10,8 +12,40 @@ import productosRoutes from './routes/productos.js';
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN }));
+const corsOrigins = (process.env.CORS_ORIGINS || process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || corsOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  },
+}));
 app.use(express.json());
+
+app.get('/api/openapi.json', (_req, res) => {
+  res.json(openapiSpec);
+});
+
+app.use(
+  '/api/docs',
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+      },
+    },
+  }),
+  swaggerUi.serve,
+  swaggerUi.setup(openapiSpec, { swaggerOptions: { persistAuthorization: false } }),
+);
 
 app.get('/api/health', (_req, res) => {
   res.json({ estado: 'ok' });

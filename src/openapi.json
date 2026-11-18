@@ -1,0 +1,1467 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AudioMax / Sonido Vivo API",
+    "version": "1.0.0",
+    "description": "Contrato de las rutas actualmente implementadas por el backend de AudioMax. Los ejemplos son ficticios. Las rutas protegidas requieren JWT de tipo Bearer.",
+    "license": {
+      "name": "ISC",
+      "url": "https://opensource.org/license/isc-license-txt"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Mismo host donde se ejecuta la API"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Estado",
+      "description": "Comprobaciones del servicio y la base de datos"
+    },
+    {
+      "name": "Productos",
+      "description": "Catálogo público y administración de productos"
+    },
+    {
+      "name": "Autenticación",
+      "description": "Registro, inicio de sesión y perfil protegido"
+    },
+    {
+      "name": "Pedidos",
+      "description": "Compra, historial propio y administración de pedidos"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Estado"
+        ],
+        "summary": "Comprobar que el servidor está activo",
+        "responses": {
+          "200": {
+            "description": "Servidor disponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                },
+                "example": {
+                  "estado": "ok"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApiHealth",
+        "security": []
+      }
+    },
+    "/api/db-check": {
+      "get": {
+        "tags": [
+          "Estado"
+        ],
+        "summary": "Comprobar conexión con PostgreSQL",
+        "description": "Ruta de diagnóstico sin autenticación en la implementación actual. Revisar su exposición antes de publicar en producción.",
+        "responses": {
+          "200": {
+            "description": "Base de datos accesible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DbCheck"
+                },
+                "example": {
+                  "estado": "ok",
+                  "hora": "2026-01-15T15:30:00.000Z"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "No se pudo conectar con la base de datos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DbCheckError"
+                },
+                "example": {
+                  "estado": "error",
+                  "mensaje": "No se pudo conectar con la base de datos"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getApiDb-Check",
+        "security": []
+      }
+    },
+    "/api/productos": {
+      "get": {
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Listar productos activos",
+        "description": "Endpoint público usado por el catálogo y las pantallas de búsqueda/categorías.",
+        "responses": {
+          "200": {
+            "description": "Lista de productos activos; puede ser vacía",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Producto"
+                  }
+                },
+                "example": [
+                  {
+                    "codigo": "ACC-001",
+                    "categoria": "Accesorios",
+                    "nombre": "Afinador cromático de clip",
+                    "marca": "Korg",
+                    "modelo": "Pitchclip 2",
+                    "stock": 25,
+                    "precio_clp": 15900,
+                    "descuento_pct": 0,
+                    "imagen_url": "/img/afinador.jpg"
+                  }
+                ]
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "getApiProductos",
+        "security": []
+      },
+      "post": {
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Crear un producto",
+        "description": "Solo administradores. El código debe ser único. El servidor guarda el producto como activo.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ProductoInput"
+        },
+        "responses": {
+          "201": {
+            "description": "Producto creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "producto": {
+                      "$ref": "#/components/schemas/Producto"
+                    }
+                  },
+                  "required": [
+                    "producto"
+                  ]
+                },
+                "example": {
+                  "producto": {
+                    "codigo": "CAB-001",
+                    "categoria": "Audio",
+                    "nombre": "Cable XLR",
+                    "marca": "AudioMax",
+                    "modelo": "3 m",
+                    "stock": 12,
+                    "precio_clp": 9900,
+                    "descuento_pct": 0,
+                    "imagen_url": "/img/cable.jpg"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "Ya existe un producto con ese código",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Ya existe el producto CAB-001"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "postApiProductos"
+      }
+    },
+    "/api/productos/{codigo}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/CodigoProducto"
+        }
+      ],
+      "put": {
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Actualizar un producto activo",
+        "description": "Solo administradores. El código se toma de la ruta y no se modifica.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/ProductoUpdate"
+        },
+        "responses": {
+          "200": {
+            "description": "Producto actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "producto": {
+                      "$ref": "#/components/schemas/Producto"
+                    }
+                  },
+                  "example": {
+                    "producto": {
+                      "codigo": "CAB-001",
+                      "categoria": "Audio",
+                      "nombre": "Cable XLR",
+                      "marca": "AudioMax",
+                      "modelo": "5 m",
+                      "stock": 10,
+                      "precio_clp": 12900,
+                      "descuento_pct": 0,
+                      "imagen_url": "/img/cable.jpg"
+                    }
+                  },
+                  "required": [
+                    "producto"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "putApiProductosCodigo"
+      },
+      "delete": {
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Retirar lógicamente un producto",
+        "description": "Solo administradores. No borra físicamente el registro: establece activo=false.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Producto retirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "eliminado": {
+                      "type": "boolean"
+                    },
+                    "codigo": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "eliminado",
+                    "codigo"
+                  ]
+                },
+                "example": {
+                  "eliminado": true,
+                  "codigo": "CAB-001"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "retirarProducto"
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Registrar una cuenta cliente",
+        "description": "El rol cliente lo asigna el servidor; el cuerpo no acepta un rol. La contraseña se transforma con bcryptjs y no se devuelve.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterInput"
+              },
+              "example": {
+                "nombre": "Camila Soto",
+                "email": "camila@example.test",
+                "password": "example-not-real"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cuenta creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usuario": {
+                      "$ref": "#/components/schemas/Usuario"
+                    }
+                  },
+                  "required": [
+                    "usuario"
+                  ]
+                },
+                "example": {
+                  "usuario": {
+                    "id": 42,
+                    "nombre": "Camila Soto",
+                    "email": "camila@example.test",
+                    "rol": "cliente"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "description": "Conflicto de unicidad; respuesta genérica",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "No se pudo crear la cuenta con esos datos"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "postApiAuthRegister",
+        "security": []
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Iniciar sesión",
+        "description": "Devuelve un access token firmado. La vigencia proviene de JWT_EXPIRES_IN y por defecto es 1h. No devuelve el hash.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              },
+              "example": {
+                "email": "camila@example.test",
+                "password": "example-not-real"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inicio de sesión correcto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                },
+                "example": {
+                  "accessToken": "eyJhbGciOiJIUzI1NiJ9.ejQ1Mn0.firma-ficticia",
+                  "tokenType": "Bearer",
+                  "expiresIn": "1h",
+                  "usuario": {
+                    "id": 42,
+                    "nombre": "Camila Soto",
+                    "email": "camila@example.test",
+                    "rol": "cliente"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "description": "Credenciales incorrectas o cuenta inactiva; mensaje genérico",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Correo o contraseña incorrectos"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "postApiAuthLogin",
+        "security": []
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Obtener el perfil de la sesión actual",
+        "description": "El usuario se identifica a partir del subject del JWT, no de un id enviado por el cliente.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil autenticado sin contraseña ni hash",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usuario": {
+                      "$ref": "#/components/schemas/Usuario"
+                    }
+                  },
+                  "required": [
+                    "usuario"
+                  ]
+                },
+                "example": {
+                  "usuario": {
+                    "id": 42,
+                    "nombre": "Camila Soto",
+                    "email": "camila@example.test",
+                    "rol": "cliente"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "getApiAuthMe"
+      }
+    },
+    "/api/pedidos": {
+      "post": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Crear un pedido y descontar el stock",
+        "description": "Usuario autenticado. El servidor obtiene el usuario desde el JWT y calcula precios y total usando el catálogo vigente. La creación del pedido, sus líneas y el descuento de stock usan una transacción y bloqueo de productos.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PedidoInput"
+        },
+        "responses": {
+          "201": {
+            "description": "Pedido creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pedido": {
+                      "$ref": "#/components/schemas/PedidoCreado"
+                    }
+                  },
+                  "required": [
+                    "pedido"
+                  ]
+                },
+                "example": {
+                  "pedido": {
+                    "id": 81,
+                    "fecha": "2026-01-15T15:30:00.000Z",
+                    "estado": "preparacion",
+                    "total_clp": 15900,
+                    "lineas": [
+                      {
+                        "codigo": "ACC-001",
+                        "nombre": "Afinador cromático de clip",
+                        "cantidad": 1,
+                        "precio_unitario_clp": 15900,
+                        "subtotal_clp": 15900
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos, productos o cantidades inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Datos de compra inválidos"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "Producto no disponible o stock insuficiente; no se registra la compra",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "Stock insuficiente para Afinador cromático de clip"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "postApiPedidos"
+      }
+    },
+    "/api/pedidos/mios": {
+      "get": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Listar el historial del usuario actual",
+        "description": "El filtro usa el usuario autenticado; cambiar un id en la URL no permite consultar pedidos de otra persona.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historial propio, posiblemente vacío",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pedidos": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Pedido"
+                      }
+                    }
+                  },
+                  "required": [
+                    "pedidos"
+                  ]
+                },
+                "example": {
+                  "pedidos": []
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "getApiPedidosMios"
+      }
+    },
+    "/api/pedidos/admin": {
+      "get": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Listar todos los pedidos para administración",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista completa de pedidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pedidos": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PedidoAdmin"
+                      }
+                    }
+                  },
+                  "required": [
+                    "pedidos"
+                  ]
+                },
+                "example": {
+                  "pedidos": [
+                    {
+                      "id": 81,
+                      "fecha": "2026-01-15T15:30:00.000Z",
+                      "estado": "preparacion",
+                      "total_clp": 15900,
+                      "nombre_destinatario": "Camila Soto",
+                      "direccion_entrega": "Calle Ficticia 123",
+                      "usuario": "camila@example.test",
+                      "lineas": [
+                        {
+                          "codigo": "ACC-001",
+                          "nombre": "Afinador cromático de clip",
+                          "cantidad": 1,
+                          "precio_unitario_clp": 15900,
+                          "subtotal_clp": 15900
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "getApiPedidosAdmin"
+      }
+    },
+    "/api/pedidos/{id}/estado": {
+      "patch": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Cambiar el estado de un pedido",
+        "description": "Solo administradores. Estados admitidos: preparacion, despachado o entregado.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPedido"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "estado": {
+                    "type": "string",
+                    "enum": [
+                      "preparacion",
+                      "despachado",
+                      "entregado"
+                    ]
+                  }
+                },
+                "required": [
+                  "estado"
+                ]
+              },
+              "example": {
+                "estado": "despachado"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pedido": {
+                      "$ref": "#/components/schemas/PedidoResumen"
+                    }
+                  },
+                  "required": [
+                    "pedido"
+                  ]
+                },
+                "example": {
+                  "pedido": {
+                    "id": 81,
+                    "fecha": "2026-01-15T15:30:00.000Z",
+                    "estado": "despachado",
+                    "total_clp": 15900
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "patchApiPedidosIdEstado"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Usar el accessToken obtenido en POST /api/auth/login. Swagger UI lo envía como Authorization: Bearer <token>."
+      }
+    },
+    "parameters": {
+      "CodigoProducto": {
+        "name": "codigo",
+        "in": "path",
+        "required": true,
+        "description": "Código del producto",
+        "schema": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "example": "ACC-001"
+      },
+      "IdPedido": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Identificador numérico del pedido",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "example": 81
+      }
+    },
+    "requestBodies": {
+      "ProductoInput": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProductoInput"
+            },
+            "example": {
+              "codigo": "CAB-001",
+              "categoria": "Audio",
+              "nombre": "Cable XLR",
+              "marca": "AudioMax",
+              "modelo": "3 m",
+              "stock": 12,
+              "precio_clp": 9900,
+              "descuento_pct": 0,
+              "imagen_url": "/img/cable.jpg"
+            }
+          }
+        }
+      },
+      "ProductoUpdate": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProductoUpdate"
+            },
+            "example": {
+              "categoria": "Audio",
+              "nombre": "Cable XLR",
+              "marca": "AudioMax",
+              "modelo": "5 m",
+              "stock": 10,
+              "precio_clp": 12900,
+              "descuento_pct": 0,
+              "imagen_url": "/img/cable.jpg"
+            }
+          }
+        }
+      },
+      "PedidoInput": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PedidoInput"
+            },
+            "example": {
+              "cliente": {
+                "nombre": "Camila Soto",
+                "direccion": "Calle Ficticia 123"
+              },
+              "items": [
+                {
+                  "codigo": "ACC-001",
+                  "cantidad": 1
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Health": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "example": "ok"
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "DbCheck": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string"
+          },
+          "hora": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "estado"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "Usuario": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "cliente",
+              "admin"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "email",
+          "rol"
+        ]
+      },
+      "RegisterInput": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "description": "La API requiere 8 a 72 bytes UTF-8. No se almacena ni devuelve en texto plano."
+          }
+        },
+        "required": [
+          "nombre",
+          "email",
+          "password"
+        ]
+      },
+      "LoginInput": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT de acceso. El ejemplo es ficticio y no es un token válido."
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expiresIn": {
+            "type": "string",
+            "example": "1h"
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          }
+        },
+        "required": [
+          "accessToken",
+          "tokenType",
+          "expiresIn",
+          "usuario"
+        ]
+      },
+      "Producto": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string",
+            "nullable": true
+          },
+          "modelo": {
+            "type": "string",
+            "nullable": true
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "precio_clp": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "descuento_pct": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "imagen_url": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "codigo",
+          "categoria",
+          "nombre",
+          "stock",
+          "precio_clp",
+          "descuento_pct"
+        ]
+      },
+      "ProductoInput": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "categoria": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "marca": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "modelo": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "precio_clp": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "descuento_pct": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "imagen_url": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "codigo",
+          "categoria",
+          "nombre",
+          "stock",
+          "precio_clp"
+        ],
+        "additionalProperties": true
+      },
+      "ProductoUpdate": {
+        "type": "object",
+        "properties": {
+          "categoria": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "marca": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "modelo": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "stock": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "precio_clp": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "descuento_pct": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "imagen_url": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "categoria",
+          "nombre",
+          "stock",
+          "precio_clp"
+        ],
+        "additionalProperties": true
+      },
+      "PedidoInput": {
+        "type": "object",
+        "properties": {
+          "cliente": {
+            "type": "object",
+            "properties": {
+              "nombre": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "direccion": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "nombre",
+              "direccion"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "properties": {
+                "codigo": {
+                  "type": "string",
+                  "maxLength": 30
+                },
+                "cantidad": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 99
+                }
+              },
+              "required": [
+                "codigo",
+                "cantidad"
+              ]
+            }
+          }
+        },
+        "required": [
+          "cliente",
+          "items"
+        ]
+      },
+      "LineaPedido": {
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "integer"
+          },
+          "precio_unitario_clp": {
+            "type": "integer"
+          },
+          "subtotal_clp": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "codigo",
+          "nombre",
+          "cantidad",
+          "precio_unitario_clp",
+          "subtotal_clp"
+        ]
+      },
+      "PedidoResumen": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "preparacion",
+              "despachado",
+              "entregado"
+            ]
+          },
+          "total_clp": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "fecha",
+          "estado",
+          "total_clp"
+        ]
+      },
+      "PedidoCreado": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PedidoResumen"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "lineas": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LineaPedido"
+                }
+              }
+            },
+            "required": [
+              "lineas"
+            ]
+          }
+        ]
+      },
+      "Pedido": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PedidoResumen"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "nombre_destinatario": {
+                "type": "string"
+              },
+              "direccion_entrega": {
+                "type": "string"
+              },
+              "lineas": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LineaPedido"
+                }
+              }
+            },
+            "required": [
+              "lineas"
+            ]
+          }
+        ]
+      },
+      "PedidoAdmin": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Pedido"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "usuario": {
+                "type": "string",
+                "format": "email"
+              }
+            },
+            "required": [
+              "usuario"
+            ]
+          }
+        ]
+      },
+      "DbCheckError": {
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "mensaje": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "estado",
+          "mensaje"
+        ]
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Entrada inválida",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Datos inválidos"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Token ausente, inválido o vencido",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Token inválido o vencido"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Usuario autenticado sin rol de administrador",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "No tienes permiso para esta acción"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Recurso no encontrado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Producto no encontrado"
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Error interno",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "No se pudo completar la solicitud"
+            }
+          }
+        }
+      }
+    }
+  }
+}
