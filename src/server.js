@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { pool } from './config/db.js';
 import authRoutes from './routes/auth.js';
+import pedidosRoutes from './routes/pedidos.js';
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.get('/api/productos', async (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/pedidos', pedidosRoutes);
 
 const puerto = process.env.PORT || 3000;
 app.listen(puerto, () => {
