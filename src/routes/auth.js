@@ -66,6 +66,15 @@ export async function autenticar(req, res, next) {
   }
 }
 
+export function exigirRol(...rolesPermitidos) {
+  return (req, res, next) => {
+    if (!req.usuario || !rolesPermitidos.includes(req.usuario.rol)) {
+      return res.status(403).json({ error: 'No tienes permiso para esta acción' });
+    }
+    next();
+  };
+}
+
 router.post('/register', async (req, res) => {
   const nombre = String(req.body?.nombre ?? '').trim();
   const email = String(req.body?.email ?? '').trim().toLowerCase();

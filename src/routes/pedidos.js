@@ -1,8 +1,75 @@
 import { Router } from 'express';
 import { pool } from '../config/db.js';
-import { autenticar } from './auth.js';
+import { autenticar, exigirRol } from './auth.js';
 
 const router = Router();
+
+router.get('/admin', autenticar, exigirRol('admin'), async (req, res) => {
+  try {
+    const resultado = await pool.query(
+      `SELECT
+         p.id,
+         p.fecha,
+         p.estado,
+         p.total_clp,
+         p.nombre_destinatario,
+         p.direccion_entrega,
+         u.email AS usuario,
+         COALESCE(
+           json_agg(
+             json_build_object(
+               'codigo', d.producto_codigo,
+               'nombre', d.nombre_producto,
+               'cantidad', d.cantidad,
+               'precio_unitario_clp', d.precio_unitario_clp,
+               'subtotal_clp', d.subtotal_clp
+             )
+             ORDER BY d.producto_codigo
+           ) FILTER (WHERE d.pedido_id IS NOT NULL),
+           '[]'::json
+         ) AS lineas
+       FROM public.pedidos p
+       JOIN public.usuarios u ON u.id = p.usuario_id
+       LEFT JOIN public.detalle_pedido d ON d.pedido_id = p.id
+       GROUP BY p.id, u.email
+       ORDER BY p.fecha DESC`,
+    );
+
+    return res.json({ pedidos: resultado.rows });
+  } catch (error) {
+    console.error('Error al listar pedidos para administración:', error.message);
+    return res.status(500).json({ error: 'No se pudieron obtener los pedidos' });
+  }
+});
+
+router.patch('/:id/estado', autenticar, exigirRol('admin'), async (req, res) => {
+  const id = String(req.params.id ?? '');
+  const estado = String(req.body?.estado ?? '');
+  const estadosPermitidos = ['preparacion', 'despachado', 'entregado'];
+
+  if (!/^\d+$/.test(id) || !estadosPermitidos.includes(estado)) {
+    return res.status(400).json({ error: 'Identificador o estado inválido' });
+  }
+
+  try {
+    const resultado = await pool.query(
+      `UPDATE public.pedidos
+       SET estado = $1
+       WHERE id = $2
+       RETURNING id, fecha, estado, total_clp`,
+      [estado, id],
+    );
+
+    if (resultado.rowCount === 0) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+
+    return res.json({ pedido: resultado.rows[0] });
+  } catch (error) {
+    console.error('Error al cambiar estado del pedido:', error.message);
+    return res.status(500).json({ error: 'No se pudo actualizar el pedido' });
+  }
+});
 
 router.get('/mios', autenticar, async (req, res) => {
   try {
