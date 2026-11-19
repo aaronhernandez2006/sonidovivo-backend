@@ -162,6 +162,17 @@ Para obtener una cuenta cliente, usar `POST /api/auth/register` y luego iniciar 
 
 **Probado según la ejecución comunicada por el equipo el 18 de noviembre de 2026:** registro/login/perfil; compra e historial; `npm run test:run` y `npm run build` del frontend; `node --check` del servidor y rutas; prueba de autorización que devolvió HTTP `403` para un cliente en `GET /api/pedidos/admin` y `POST /api/productos`, y eliminó la cuenta temporal al finalizar. Estos son resultados reportados desde la instancia del equipo, no una ejecución contra RDS realizada desde este repositorio documental.
 
+## Estado del avance (usuarios)
+
+| Operación | Estado | Nota |
+| --- | --- | --- |
+| Tabla de usuarios | Listo | PostgreSQL en RDS; contraseñas con bcrypt |
+| Inicio de sesión | Listo | JWT con vigencia de 1 h |
+| Registro | Listo | Rol `cliente` asignado por el servidor |
+| Modificar usuario | En avance | `PATCH /api/usuarios/:id` implementada; falta documentar en Swagger |
+| Listar usuarios | En avance | `GET /api/usuarios` (admin) implementada; falta documentar en Swagger |
+| Eliminar o desactivar usuario | En avance | `DELETE /api/usuarios/:id` (borrado lógico); falta documentar en Swagger |
+
 **Pendiente de verificar luego de instalar estos cambios:** abrir `/api/docs` en EC2; descargar `/api/openapi.json`; probar con un JWT de cliente y un JWT admin sin usar credenciales reales en la documentación; comprobar el despliegue HTTPS, el alcance de CORS, el TLS de RDS y la restricción de red; completar la clave primaria exacta de `detalle_pedido`; incorporar DDL/migraciones y datos semilla reproducibles; agregar pruebas automatizadas para las rutas backend; y adjuntar el enlace directo del ERD en Drive con permisos de lectura para el docente.
 
 ## Referencias
