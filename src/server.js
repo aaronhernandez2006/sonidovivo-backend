@@ -8,6 +8,7 @@ import { pool } from './config/db.js';
 import authRoutes from './routes/auth.js';
 import pedidosRoutes from './routes/pedidos.js';
 import productosRoutes from './routes/productos.js';
+import usuariosRoutes from './routes/usuarios.js';
 
 const app = express();
 
@@ -67,6 +68,7 @@ app.get('/api/db-check', async (_req, res) => {
 app.use('/api/productos', productosRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/pedidos', pedidosRoutes);
+app.use('/api/usuarios', usuariosRoutes);
 
 const puerto = process.env.PORT || 3000;
 app.listen(puerto, () => {
