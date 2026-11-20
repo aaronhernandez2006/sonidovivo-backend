@@ -105,7 +105,7 @@ CREATE TABLE public.usuarios (
     activo boolean DEFAULT true NOT NULL,
     creado_en timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT usuarios_email_normalizado CHECK (((email)::text = lower(btrim((email)::text)))),
-    CONSTRAINT usuarios_rol_check CHECK (((rol)::text = ANY ((ARRAY['cliente'::character varying, 'admin'::character varying])::text[])))
+    CONSTRAINT usuarios_rol_check CHECK (((rol)::text = ANY ((ARRAY['cliente'::character varying, 'vendedor'::character varying, 'admin'::character varying])::text[])))
 );
 
 

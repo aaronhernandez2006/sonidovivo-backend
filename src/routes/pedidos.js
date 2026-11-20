@@ -4,7 +4,7 @@ import { autenticar, exigirRol } from './auth.js';
 
 const router = Router();
 
-router.get('/admin', autenticar, exigirRol('admin'), async (req, res) => {
+router.get('/admin', autenticar, exigirRol('admin','vendedor'), async (req, res) => {
   try {
     const resultado = await pool.query(
       `SELECT
@@ -42,7 +42,7 @@ router.get('/admin', autenticar, exigirRol('admin'), async (req, res) => {
   }
 });
 
-router.patch('/:id/estado', autenticar, exigirRol('admin'), async (req, res) => {
+router.patch('/:id/estado', autenticar, exigirRol('admin','vendedor'), async (req, res) => {
   const id = String(req.params.id ?? '');
   const estado = String(req.body?.estado ?? '');
   const estadosPermitidos = ['preparacion', 'despachado', 'entregado'];

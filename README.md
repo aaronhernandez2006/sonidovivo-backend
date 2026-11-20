@@ -95,6 +95,9 @@ Rutas actualmente implementadas en el código:
 
 Los recursos protegidos devuelven `401` si falta el token o no es válido y `403` cuando el usuario autenticado no tiene rol suficiente. Las respuestas nunca incluyen `password_hash`. El checkout asigna el pedido al usuario del JWT, no acepta `usuario_id` del cliente. `GET /api/pedidos/mios` filtra por ese mismo usuario, lo que impide consultar pedidos de otra persona cambiando un identificador en la URL.
 
+**Swagger desplegado (EC2):** `http://35.153.166.136:3000/api/docs`  
+**Contrato OpenAPI JSON:** `http://35.153.166.136:3000/api/openapi.json`
+
 ## Registro, sesión y seguridad
 
 El registro normaliza el correo y asigna el rol `cliente` dentro del backend; no acepta que una persona se eleve a administradora mediante el formulario. El rol administrativo debe asignarse por un procedimiento controlado del equipo, directamente en la base con acceso restringido; aún no existe una ruta pública para cambiar roles.
@@ -162,16 +165,19 @@ Para obtener una cuenta cliente, usar `POST /api/auth/register` y luego iniciar 
 
 **Probado según la ejecución comunicada por el equipo el 18 de noviembre de 2026:** registro/login/perfil; compra e historial; `npm run test:run` y `npm run build` del frontend; `node --check` del servidor y rutas; prueba de autorización que devolvió HTTP `403` para un cliente en `GET /api/pedidos/admin` y `POST /api/productos`, y eliminó la cuenta temporal al finalizar. Estos son resultados reportados desde la instancia del equipo, no una ejecución contra RDS realizada desde este repositorio documental.
 
-## Estado del avance (usuarios)
+## Estado del avance (usuarios, roles y autenticación)
 
-| Operación | Estado | Nota |
-| --- | --- | --- |
-| Tabla de usuarios | Listo | PostgreSQL en RDS; contraseñas con bcrypt |
-| Inicio de sesión | Listo | JWT con vigencia de 1 h |
-| Registro | Listo | Rol `cliente` asignado por el servidor |
-| Modificar usuario | En avance | `PATCH /api/usuarios/:id` implementada; falta documentar en Swagger |
-| Listar usuarios | En avance | `GET /api/usuarios` (admin) implementada; falta documentar en Swagger |
-| Eliminar o desactivar usuario | En avance | `DELETE /api/usuarios/:id` (borrado lógico); falta documentar en Swagger |
+| Operación / Componente | Diseñado | Implementado | Probado | Nota |
+| --- | :---: | :---: | :---: | --- |
+| Tabla `usuarios` y roles (`cliente`, `vendedor`, `admin`) | Sí | Sí | Sí | PostgreSQL en RDS (`schema.sql`), email normalizado y contraseñas con bcrypt |
+| Registro (`POST /api/v1/auth/register`) | Sí | Sí | Sí | Rol inicial `cliente` asignado por el servidor; `409` en duplicado |
+| Inicio de sesión (`POST /api/v1/auth/login`) | Sí | Sí | Sí | JWT HS256 con vigencia (`1h`); `401` genérico ante credenciales inválidas |
+| Perfil actual (`GET /api/v1/auth/me`) | Sí | Sí | Sí | Valida firma, expiración y cuenta activa en BD |
+| Listar usuarios (`GET /api/v1/usuarios`) | Sí | Sí | Sí | Solo `admin`; `401` sin token, `403` para otros roles, sin `password_hash` |
+| Consultar usuario (`GET /api/v1/usuarios/:id`) | Sí | Sí | Sí | `admin` ve cualquiera; otros roles solo su propia cuenta (`403` si cambian el ID) |
+| Modificar usuario (`PATCH /api/v1/usuarios/:id`) | Sí | Sí | Sí | Nombre/correo propio o `admin`; rol y estado `activo` solo `admin` |
+| Desactivar usuario (`DELETE /api/v1/usuarios/:id`) | Sí | Sí | Sí | Borrado lógico (`activo = false`) solo `admin`; impide auto-desactivación (`400`) e invalida el token |
+| Documentación Swagger (`/api/docs`) | Sí | Sí | Sí | Todos los endpoints `/api/v1` documentados y probados con Bearer JWT |
 
 **Pendiente de verificar luego de instalar estos cambios:** abrir `/api/docs` en EC2; descargar `/api/openapi.json`; probar con un JWT de cliente y un JWT admin sin usar credenciales reales en la documentación; comprobar el despliegue HTTPS, el alcance de CORS, el TLS de RDS y la restricción de red; completar la clave primaria exacta de `detalle_pedido`; incorporar DDL/migraciones y datos semilla reproducibles; agregar pruebas automatizadas para las rutas backend; y adjuntar el enlace directo del ERD en Drive con permisos de lectura para el docente.
 

@@ -137,4 +137,33 @@ router.delete('/:codigo', autenticar, exigirRol('admin'), async (req, res) => {
   }
 });
 
+router.patch('/:codigo/stock', autenticar, exigirRol('admin', 'vendedor'), async (req, res) => {
+  const codigo = String(req.params.codigo ?? '').trim().toUpperCase();
+  const stock = Number(req.body?.stock);
+
+  if (!codigo || codigo.length > 30 || !Number.isInteger(stock) || stock < 0) {
+    return res.status(400).json({ error: 'Código o stock inválido' });
+  }
+
+  try {
+    const resultado = await pool.query(
+      `UPDATE public.productos
+       SET stock = $1
+       WHERE codigo = $2 AND activo = TRUE
+       RETURNING codigo, categoria, nombre, marca, modelo, stock,
+                 precio_clp, descuento_pct, imagen_url`,
+      [stock, codigo],
+    );
+
+    if (resultado.rowCount === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    return res.json({ producto: resultado.rows[0] });
+  } catch (error) {
+    console.error('Error al actualizar stock:', error.message);
+    return res.status(500).json({ error: 'No se pudo actualizar el stock' });
+  }
+});
+
 export default router;

@@ -4,7 +4,7 @@ import { autenticar, exigirRol } from './auth.js';
 
 const router = Router();
 
-const ROLES = ['cliente', 'admin'];
+const ROLES = ['cliente', 'vendedor', 'admin'];
 const COLUMNAS = 'id, nombre, email, rol, activo, creado_en';
 
 function idValido(texto) {

@@ -65,6 +65,16 @@ app.get('/api/db-check', async (_req, res) => {
   }
 });
 
+// Rutas versionadas
+app.get('/api/v1/health', (_req, res) => {
+  res.json({ estado: 'ok' });
+});
+app.use('/api/v1/productos', productosRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/pedidos', pedidosRoutes);
+app.use('/api/v1/usuarios', usuariosRoutes);
+
+//de compatibilidad temporal
 app.use('/api/productos', productosRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/pedidos', pedidosRoutes);

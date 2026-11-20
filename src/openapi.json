@@ -31,10 +31,14 @@
     {
       "name": "Pedidos",
       "description": "Compra, historial propio y administración de pedidos"
+    },
+    {
+      "name": "Usuarios",
+      "description": "Gestión de cuentas y roles"
     }
   ],
   "paths": {
-    "/api/health": {
+    "/api/v1/health": {
       "get": {
         "tags": [
           "Estado"
@@ -59,7 +63,7 @@
         "security": []
       }
     },
-    "/api/db-check": {
+    "/api/v1/db-check": {
       "get": {
         "tags": [
           "Estado"
@@ -100,7 +104,7 @@
         "security": []
       }
     },
-    "/api/productos": {
+    "/api/v1/productos": {
       "get": {
         "tags": [
           "Productos"
@@ -216,7 +220,7 @@
         "operationId": "postApiProductos"
       }
     },
-    "/api/productos/{codigo}": {
+    "/api/v1/productos/{codigo}": {
       "parameters": [
         {
           "$ref": "#/components/parameters/CodigoProducto"
@@ -340,7 +344,7 @@
         "operationId": "retirarProducto"
       }
     },
-    "/api/auth/register": {
+    "/api/v1/auth/register": {
       "post": {
         "tags": [
           "Autenticación"
@@ -413,7 +417,7 @@
         "security": []
       }
     },
-    "/api/auth/login": {
+    "/api/v1/auth/login": {
       "post": {
         "tags": [
           "Autenticación"
@@ -480,7 +484,7 @@
         "security": []
       }
     },
-    "/api/auth/me": {
+    "/api/v1/auth/me": {
       "get": {
         "tags": [
           "Autenticación"
@@ -529,7 +533,7 @@
         "operationId": "getApiAuthMe"
       }
     },
-    "/api/pedidos": {
+    "/api/v1/pedidos": {
       "post": {
         "tags": [
           "Pedidos"
@@ -616,7 +620,7 @@
         "operationId": "postApiPedidos"
       }
     },
-    "/api/pedidos/mios": {
+    "/api/v1/pedidos/mios": {
       "get": {
         "tags": [
           "Pedidos"
@@ -663,7 +667,7 @@
         "operationId": "getApiPedidosMios"
       }
     },
-    "/api/pedidos/admin": {
+    "/api/v1/pedidos/admin": {
       "get": {
         "tags": [
           "Pedidos"
@@ -728,16 +732,17 @@
             "$ref": "#/components/responses/InternalError"
           }
         },
-        "operationId": "getApiPedidosAdmin"
+        "operationId": "getApiPedidosAdmin",
+        "description": "Acceso permitido para roles admin y vendedor."
       }
     },
-    "/api/pedidos/{id}/estado": {
+    "/api/v1/pedidos/{id}/estado": {
       "patch": {
         "tags": [
           "Pedidos"
         ],
         "summary": "Cambiar el estado de un pedido",
-        "description": "Solo administradores. Estados admitidos: preparacion, despachado o entregado.",
+        "description": "Roles admin y vendedor. Estados admitidos: preparacion, despachado o entregado.",
         "security": [
           {
             "bearerAuth": []
@@ -819,6 +824,315 @@
         },
         "operationId": "patchApiPedidosIdEstado"
       }
+    },
+    "/api/v1/productos/{codigo}/stock": {
+      "patch": {
+        "tags": [
+          "Productos"
+        ],
+        "summary": "Actualizar el stock de un producto",
+        "description": "Acceso permitido para roles admin y vendedor.",
+        "operationId": "patchApiV1ProductosCodigoStock",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CodigoProducto"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "stock": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "stock"
+                ]
+              },
+              "example": {
+                "stock": 15
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stock actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "producto": {
+                      "$ref": "#/components/schemas/Producto"
+                    }
+                  },
+                  "required": [
+                    "producto"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/api/v1/usuarios": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Listar todos los usuarios",
+        "description": "Solo administradores. Nunca devuelve password_hash.",
+        "operationId": "getApiV1Usuarios",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de usuarios",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usuarios": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UsuarioDetalle"
+                      }
+                    }
+                  },
+                  "required": [
+                    "usuarios"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/api/v1/usuarios/{id}": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Consultar un usuario por ID",
+        "description": "El administrador puede consultar cualquier usuario; los demás roles solo su propia cuenta.",
+        "operationId": "getApiV1UsuariosId",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdUsuario"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Datos del usuario sin contraseña ni hash",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usuario": {
+                      "$ref": "#/components/schemas/UsuarioDetalle"
+                    }
+                  },
+                  "required": [
+                    "usuario"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Modificar datos, rol o estado de un usuario",
+        "description": "Nombre y correo: la propia persona o admin. Rol y estado (activo): solo admin.",
+        "operationId": "patchApiV1UsuariosId",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdUsuario"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioUpdate"
+              },
+              "example": {
+                "nombre": "Camila Soto",
+                "rol": "vendedor"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuario actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usuario": {
+                      "$ref": "#/components/schemas/UsuarioDetalle"
+                    }
+                  },
+                  "required": [
+                    "usuario"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Conflicto con correo duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Desactivar un usuario (borrado lógico)",
+        "description": "Solo administradores. Cambia activo a false e invalida el uso futuro de su token.",
+        "operationId": "deleteApiV1UsuariosId",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdUsuario"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuario desactivado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "usuario": {
+                      "$ref": "#/components/schemas/UsuarioDetalle"
+                    }
+                  },
+                  "required": [
+                    "usuario"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -827,7 +1141,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "Usar el accessToken obtenido en POST /api/auth/login. Swagger UI lo envía como Authorization: Bearer <token>."
+        "description": "Usar el accessToken obtenido en POST /api/v1/auth/login. Swagger UI lo envía como Authorization: Bearer <token>."
       }
     },
     "parameters": {
@@ -852,6 +1166,17 @@
           "minimum": 1
         },
         "example": 81
+      },
+      "IdUsuario": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Identificador numérico del usuario",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "example": 2
       }
     },
     "requestBodies": {
@@ -976,6 +1301,7 @@
             "type": "string",
             "enum": [
               "cliente",
+              "vendedor",
               "admin"
             ]
           }
@@ -1394,6 +1720,55 @@
           "estado",
           "mensaje"
         ]
+      },
+      "UsuarioDetalle": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Usuario"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "activo": {
+                "type": "boolean"
+              },
+              "creado_en": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "activo",
+              "creado_en"
+            ]
+          }
+        ]
+      },
+      "UsuarioUpdate": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "rol": {
+            "type": "string",
+            "enum": [
+              "cliente",
+              "vendedor",
+              "admin"
+            ]
+          },
+          "activo": {
+            "type": "boolean"
+          }
+        }
       }
     },
     "responses": {
