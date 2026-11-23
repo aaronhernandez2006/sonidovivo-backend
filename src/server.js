@@ -52,7 +52,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ estado: 'ok' });
 });
 
-app.get('/api/db-check', async (_req, res) => {
+async function comprobarBaseDeDatos(_req, res) {
   try {
     const resultado = await pool.query('SELECT NOW() AS hora');
     res.json({ estado: 'ok', hora: resultado.rows[0].hora });
@@ -63,12 +63,15 @@ app.get('/api/db-check', async (_req, res) => {
       mensaje: 'No se pudo conectar con la base de datos',
     });
   }
-});
+}
+
+app.get('/api/db-check', comprobarBaseDeDatos);
 
 // Rutas versionadas
 app.get('/api/v1/health', (_req, res) => {
   res.json({ estado: 'ok' });
 });
+app.get('/api/v1/db-check', comprobarBaseDeDatos);
 app.use('/api/v1/productos', productosRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/pedidos', pedidosRoutes);

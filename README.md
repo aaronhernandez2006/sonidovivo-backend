@@ -95,7 +95,7 @@ Rutas actualmente implementadas en el código:
 
 Los recursos protegidos devuelven `401` si falta el token o no es válido y `403` cuando el usuario autenticado no tiene rol suficiente. Las respuestas nunca incluyen `password_hash`. El checkout asigna el pedido al usuario del JWT, no acepta `usuario_id` del cliente. `GET /api/pedidos/mios` filtra por ese mismo usuario, lo que impide consultar pedidos de otra persona cambiando un identificador en la URL.
 
-**Swagger desplegado (EC2):** `http://35.153.166.136:3000/api/docs`  
+**Swagger desplegado (EC2, la IP pública cambia al reiniciar el laboratorio; vigente el día de la presentación):** `http://35.153.166.136:3000/api/docs`  
 **Contrato OpenAPI JSON:** `http://35.153.166.136:3000/api/openapi.json`
 
 ## Registro, sesión y seguridad
@@ -148,6 +148,15 @@ cp .env.example .env
 nano .env
 ```
 
+Antes de arrancar, crear las tablas y cargar el catálogo en una base PostgreSQL vacía (los archivos no contienen usuarios ni contraseñas):
+
+```bash
+psql "host=<endpoint> dbname=<base> user=<usuario> sslmode=require" -f db/schema.sql
+psql "host=<endpoint> dbname=<base> user=<usuario> sslmode=require" -f db/seed.sql
+```
+
+`psql` pide la contraseña de forma interactiva; no se escribe en el comando.
+
 Completen el archivo local `.env` con `PORT`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRES_IN` y `CORS_ORIGINS`. `CORS_ORIGINS` admite una lista de orígenes separados por coma, por ejemplo el origen local de Vite y el dominio desplegado. `JWT_SECRET` debe tener al menos 64 caracteres aleatorios. Generen el valor en la instancia, no lo publiquen ni lo peguen en el chat. `.env` está ignorado por Git; nunca hagan `git add .env`.
 
 ```bash
@@ -169,7 +178,7 @@ Para obtener una cuenta cliente, usar `POST /api/auth/register` y luego iniciar 
 
 | Operación / Componente | Diseñado | Implementado | Probado | Nota |
 | --- | :---: | :---: | :---: | --- |
-| Tabla `usuarios` y roles (`cliente`, `vendedor`, `admin`) | Sí | Sí | Sí | PostgreSQL en RDS (`schema.sql`), email normalizado y contraseñas con bcrypt |
+| Tabla `usuarios` y roles (`cliente`, `vendedor`, `admin`) | Sí | Sí | Sí | PostgreSQL en RDS (`db/schema.sql`), email normalizado y contraseñas con bcrypt |
 | Registro (`POST /api/v1/auth/register`) | Sí | Sí | Sí | Rol inicial `cliente` asignado por el servidor; `409` en duplicado |
 | Inicio de sesión (`POST /api/v1/auth/login`) | Sí | Sí | Sí | JWT HS256 con vigencia (`1h`); `401` genérico ante credenciales inválidas |
 | Perfil actual (`GET /api/v1/auth/me`) | Sí | Sí | Sí | Valida firma, expiración y cuenta activa en BD |
