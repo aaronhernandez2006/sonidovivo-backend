@@ -109,6 +109,65 @@ router.get('/mios', autenticar, async (req, res) => {
   }
 });
 
+// Detalle de un pedido. Debe ir después de /admin y /mios para que no los confunda con un id.
+// El dueño del pedido, un vendedor o un administrador pueden verlo; cualquier otro cliente recibe 403.
+router.get('/:id', autenticar, async (req, res) => {
+  const id = String(req.params.id ?? '');
+
+  if (!/^\d{1,18}$/.test(id)) {
+    return res.status(400).json({ error: 'Identificador inválido' });
+  }
+
+  try {
+    const resultado = await pool.query(
+      `SELECT
+         p.id,
+         p.usuario_id,
+         p.fecha,
+         p.estado,
+         p.total_clp,
+         p.nombre_destinatario,
+         p.direccion_entrega,
+         u.email AS usuario,
+         COALESCE(
+           json_agg(
+             json_build_object(
+               'codigo', d.producto_codigo,
+               'nombre', d.nombre_producto,
+               'cantidad', d.cantidad,
+               'precio_unitario_clp', d.precio_unitario_clp,
+               'subtotal_clp', d.subtotal_clp
+             )
+             ORDER BY d.producto_codigo
+           ) FILTER (WHERE d.pedido_id IS NOT NULL),
+           '[]'::json
+         ) AS lineas
+       FROM public.pedidos p
+       JOIN public.usuarios u ON u.id = p.usuario_id
+       LEFT JOIN public.detalle_pedido d ON d.pedido_id = p.id
+       WHERE p.id = $1
+       GROUP BY p.id, u.email`,
+      [id],
+    );
+
+    if (resultado.rowCount === 0) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+
+    const { usuario_id: duenoId, ...pedido } = resultado.rows[0];
+    const esPersonal = ['admin', 'vendedor'].includes(req.usuario.rol);
+
+    if (!esPersonal && String(duenoId) !== String(req.usuario.id)) {
+      return res.status(403).json({ error: 'No tienes permiso para ver este pedido' });
+    }
+
+    return res.json({ pedido });
+  } catch (error) {
+    console.error('Error al consultar el pedido:', error.message);
+    return res.status(500).json({ error: 'No se pudo consultar el pedido' });
+  }
+});
+
 router.post('/', autenticar, async (req, res) => {
   const nombre = String(req.body?.cliente?.nombre ?? '').trim();
   const direccion = String(req.body?.cliente?.direccion ?? '').trim();

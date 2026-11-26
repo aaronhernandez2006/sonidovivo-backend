@@ -1,7 +1,4 @@
 -- Esquema de la base de datos de AudioMax / Sonido Vivo (PostgreSQL 18, RDS).
--- Coincide con la base real: tipos, restricciones e índices.
--- Uso:  psql "host=... dbname=... user=... sslmode=require" -f db/schema.sql
--- Después carga el catálogo con db/seed.sql.
 
 CREATE TABLE IF NOT EXISTS public.usuarios (
   id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

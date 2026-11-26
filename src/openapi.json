@@ -1133,6 +1133,61 @@
           }
         }
       }
+    },
+    "/api/v1/pedidos/{id}": {
+      "get": {
+        "tags": [
+          "Pedidos"
+        ],
+        "summary": "Consultar el detalle de un pedido",
+        "description": "Usuario autenticado. El dueño del pedido, un vendedor o un administrador pueden consultarlo; otro cliente recibe 403.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdPedido"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle del pedido con sus líneas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pedido": {
+                      "$ref": "#/components/schemas/PedidoAdmin"
+                    }
+                  },
+                  "required": [
+                    "pedido"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "operationId": "getApiPedidosId"
+      }
     }
   },
   "components": {
